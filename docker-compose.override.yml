@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  lancamentos-api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+
+  consolidado-api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development

@@ -1,0 +1,179 @@
+version: '3.8'
+
+services:
+  lancamentos-db:
+    image: postgres:16-alpine
+    container_name: lancamentos-db
+    environment:
+      POSTGRES_DB: lancamentos
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - lancamentos_data:/var/lib/postgresql/data
+      - ./database/lancamentos-schema.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lancamentos"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fluxocaixa-network
+
+  consolidado-db:
+    image: postgres:16-alpine
+    container_name: consolidado-db
+    environment:
+      POSTGRES_DB: consolidado
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - consolidado_data:/var/lib/postgresql/data
+      - ./database/consolidado-schema.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d consolidado"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fluxocaixa-network
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fluxocaixa-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fluxocaixa-network
+
+  lancamentos-api:
+    build:
+      context: .
+      dockerfile: src/Lancamentos/FluxoCaixa.Lancamentos.Api/Dockerfile
+    container_name: lancamentos-api
+    ports:
+      - "5001:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Host=lancamentos-db;Port=5432;Database=lancamentos;Username=postgres;Password=postgres
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Port=5672
+      - RabbitMQ__Username=guest
+      - RabbitMQ__Password=guest
+    depends_on:
+      lancamentos-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    networks:
+      - fluxocaixa-network
+
+  consolidado-api:
+    build:
+      context: .
+      dockerfile: src/Consolidado/FluxoCaixa.Consolidado.Api/Dockerfile
+    container_name: consolidado-api
+    ports:
+      - "5002:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Host=consolidado-db;Port=5432;Database=consolidado;Username=postgres;Password=postgres
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Port=5672
+      - RabbitMQ__Username=guest
+      - RabbitMQ__Password=guest
+      - Redis__ConnectionString=redis:6379
+    depends_on:
+      consolidado-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    networks:
+      - fluxocaixa-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: api-gateway
+    ports:
+      - "8080:80"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - lancamentos-api
+      - consolidado-api
+    networks:
+      - fluxocaixa-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - fluxocaixa-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - fluxocaixa-network
+
+volumes:
+  lancamentos_data:
+  consolidado_data:
+  rabbitmq_data:
+  redis_data:
+  grafana_data:
+
+networks:
+  fluxocaixa-network:
+    driver: bridge

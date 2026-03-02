@@ -1,0 +1,27 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Consolidado/">
+    <Project Path="src/Consolidado/FluxoCaixa.Consolidado.Api/FluxoCaixa.Consolidado.Api.csproj" />
+    <Project Path="src/Consolidado/FluxoCaixa.Consolidado.Application/FluxoCaixa.Consolidado.Application.csproj" />
+    <Project Path="src/Consolidado/FluxoCaixa.Consolidado.Domain/FluxoCaixa.Consolidado.Domain.csproj" />
+    <Project Path="src/Consolidado/FluxoCaixa.Consolidado.Infrastructure/FluxoCaixa.Consolidado.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Lancamentos/">
+    <Project Path="src/Lancamentos/FluxoCaixa.Lancamentos.Api/FluxoCaixa.Lancamentos.Api.csproj" />
+    <Project Path="src/Lancamentos/FluxoCaixa.Lancamentos.Application/FluxoCaixa.Lancamentos.Application.csproj" />
+    <Project Path="src/Lancamentos/FluxoCaixa.Lancamentos.Domain/FluxoCaixa.Lancamentos.Domain.csproj" />
+    <Project Path="src/Lancamentos/FluxoCaixa.Lancamentos.Infrastructure/FluxoCaixa.Lancamentos.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Shared/">
+    <Project Path="src/Shared/FluxoCaixa.Shared/FluxoCaixa.Shared.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/IntegrationTests/">
+    <Project Path="tests/IntegrationTests/FluxoCaixa.Consolidado.IntegrationTests/FluxoCaixa.Consolidado.IntegrationTests.csproj" />
+    <Project Path="tests/IntegrationTests/FluxoCaixa.Lancamentos.IntegrationTests/FluxoCaixa.Lancamentos.IntegrationTests.csproj" />
+  </Folder>
+  <Folder Name="/tests/UnitTests/">
+    <Project Path="tests/UnitTests/FluxoCaixa.Consolidado.UnitTests/FluxoCaixa.Consolidado.UnitTests.csproj" />
+    <Project Path="tests/UnitTests/FluxoCaixa.Lancamentos.UnitTests/FluxoCaixa.Lancamentos.UnitTests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,395 @@
+openapi: 3.0.3
+info:
+  title: FluxoCaixa API
+  description: API de Controle de Fluxo de Caixa — Lançamentos e Consolidado Diário
+  version: 1.0.0
+  contact:
+    name: FluxoCaixa Team
+
+servers:
+  - url: http://localhost:8080
+    description: Local (via NGINX)
+  - url: http://localhost:5001
+    description: Lancamentos API direto
+  - url: http://localhost:5002
+    description: Consolidado API direto
+
+paths:
+  /lancamentos/api/v1/lancamentos:
+    post:
+      summary: Criar lançamento
+      tags: [Lancamentos]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CriarLancamentoRequest'
+            example:
+              idempotencyKey: "550e8400-e29b-41d4-a716-446655440000"
+              tipo: "CREDIT"
+              valor: 1500.00
+              descricao: "Venda produto X"
+              categoria: "Vendas"
+              dataLancamento: "2024-01-15"
+      responses:
+        '201':
+          description: Lançamento criado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LancamentoApiResponse'
+        '422':
+          description: Dados inválidos ou regra de negócio violada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      summary: Listar lançamentos por período
+      tags: [Lancamentos]
+      parameters:
+        - name: dataInicio
+          in: query
+          schema:
+            type: string
+            format: date
+          example: "2024-01-01"
+        - name: dataFim
+          in: query
+          schema:
+            type: string
+            format: date
+          example: "2024-01-31"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Lista de lançamentos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LancamentosListResponse'
+
+  /lancamentos/api/v1/lancamentos/{id}:
+    get:
+      summary: Buscar lançamento por ID
+      tags: [Lancamentos]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lançamento encontrado
+        '404':
+          description: Lançamento não encontrado
+
+    put:
+      summary: Atualizar lançamento
+      tags: [Lancamentos]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AtualizarLancamentoRequest'
+      responses:
+        '200':
+          description: Lançamento atualizado
+        '404':
+          description: Lançamento não encontrado
+        '422':
+          description: Lançamento cancelado não pode ser editado
+
+    delete:
+      summary: Cancelar lançamento (soft delete)
+      tags: [Lancamentos]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lançamento cancelado
+        '404':
+          description: Lançamento não encontrado
+
+  /lancamentos/health:
+    get:
+      summary: Health check do Lancamentos Service
+      tags: [Health]
+      responses:
+        '200':
+          description: Serviço saudável
+
+  /consolidado/api/v1/consolidado:
+    get:
+      summary: Consultar consolidado por período
+      tags: [Consolidado]
+      parameters:
+        - name: dataInicio
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          example: "2024-01-01"
+        - name: dataFim
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          example: "2024-01-31"
+      responses:
+        '200':
+          description: Lista de consolidados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsolidadosListResponse'
+
+  /consolidado/api/v1/consolidado/{data}:
+    get:
+      summary: Consultar consolidado por data específica
+      tags: [Consolidado]
+      parameters:
+        - name: data
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+          example: "2024-01-15"
+      responses:
+        '200':
+          description: Consolidado do dia
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsolidadoApiResponse'
+        '404':
+          description: Consolidado não encontrado para esta data
+
+  /consolidado/health:
+    get:
+      summary: Health check do Consolidado Service
+      tags: [Health]
+      responses:
+        '200':
+          description: Serviço saudável
+
+components:
+  schemas:
+    CriarLancamentoRequest:
+      type: object
+      required: [idempotencyKey, tipo, valor, descricao]
+      properties:
+        idempotencyKey:
+          type: string
+          format: uuid
+        tipo:
+          type: string
+          enum: [CREDIT, DEBIT]
+        valor:
+          type: number
+          minimum: 0.01
+        descricao:
+          type: string
+          maxLength: 500
+        categoria:
+          type: string
+          maxLength: 100
+          nullable: true
+        dataLancamento:
+          type: string
+          format: date
+          nullable: true
+
+    AtualizarLancamentoRequest:
+      type: object
+      required: [valor, descricao]
+      properties:
+        valor:
+          type: number
+          minimum: 0.01
+        descricao:
+          type: string
+          maxLength: 500
+        categoria:
+          type: string
+          maxLength: 100
+          nullable: true
+
+    LancamentoResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        idempotencyKey:
+          type: string
+          format: uuid
+        tipo:
+          type: string
+          enum: [CREDIT, DEBIT]
+        valor:
+          type: number
+        descricao:
+          type: string
+        categoria:
+          type: string
+          nullable: true
+        dataLancamento:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [ACTIVE, CANCELLED]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ConsolidadoResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        data:
+          type: string
+          format: date
+        totalCreditos:
+          type: number
+        totalDebitos:
+          type: number
+        saldo:
+          type: number
+        quantidadeLancamentos:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+
+    LancamentoApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/LancamentoResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+        metadata:
+          $ref: '#/components/schemas/MetadataInfo'
+
+    ConsolidadoApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/ConsolidadoResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+        metadata:
+          $ref: '#/components/schemas/MetadataInfo'
+
+    LancamentosListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/LancamentoResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+        metadata:
+          $ref: '#/components/schemas/MetadataInfo'
+
+    ConsolidadosListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsolidadoResponse'
+        metadata:
+          $ref: '#/components/schemas/MetadataInfo'
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    ApiError:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: string
+
+    PaginationInfo:
+      type: object
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalItems:
+          type: integer
+        totalPages:
+          type: integer
+
+    MetadataInfo:
+      type: object
+      properties:
+        requestId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        cacheHit:
+          type: boolean
+          nullable: true
