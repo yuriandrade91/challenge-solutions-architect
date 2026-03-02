@@ -8,7 +8,7 @@ using RabbitMQ.Client;
 
 namespace FluxoCaixa.Lancamentos.Infrastructure.Messaging;
 
-public class RabbitMqPublisher : IEventPublisher, IDisposable
+public class RabbitMqPublisher : IEventPublisher, IAsyncDisposable
 {
     private readonly IConnection _connection;
     private readonly IChannel _channel;
@@ -57,11 +57,11 @@ public class RabbitMqPublisher : IEventPublisher, IDisposable
         _logger.LogInformation("Published event {EventType} with id {EventId}", @event.EventType, @event.EventId);
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
-        _channel?.CloseAsync().GetAwaiter().GetResult();
-        _connection?.CloseAsync().GetAwaiter().GetResult();
         _disposed = true;
+        if (_channel != null) await _channel.CloseAsync();
+        if (_connection != null) await _connection.CloseAsync();
     }
 }

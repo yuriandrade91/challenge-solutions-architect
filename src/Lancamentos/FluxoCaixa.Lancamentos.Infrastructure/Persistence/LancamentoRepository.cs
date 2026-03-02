@@ -16,7 +16,7 @@ public class LancamentoRepository : ILancamentoRepository
 
     public async Task<Lancamento?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         => await _context.Lancamentos
-            .Where(l => l.Status != StatusLancamento.CANCELLED || l.DeletedAt == null)
+            .Where(l => l.Status == StatusLancamento.ACTIVE && l.DeletedAt == null)
             .FirstOrDefaultAsync(l => l.Id == id, cancellationToken);
 
     public async Task<Lancamento?> GetByIdempotencyKeyAsync(Guid key, CancellationToken cancellationToken = default)

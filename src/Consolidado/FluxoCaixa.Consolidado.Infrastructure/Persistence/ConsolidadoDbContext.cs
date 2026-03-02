@@ -20,7 +20,7 @@ public class ConsolidadoDbContext : DbContext
             entity.HasIndex(e => e.Data).IsUnique();
             entity.Property(e => e.TotalCreditos).HasColumnName("total_creditos").HasPrecision(15, 2).IsRequired();
             entity.Property(e => e.TotalDebitos).HasColumnName("total_debitos").HasPrecision(15, 2).IsRequired();
-            entity.Property(e => e.Saldo).HasColumnName("saldo").HasPrecision(15, 2).IsRequired();
+            entity.Ignore(e => e.Saldo);
             entity.Property(e => e.QuantidadeLancamentos).HasColumnName("quantidade_lancamentos").IsRequired();
             entity.Property(e => e.CreatedAt).HasColumnName("created_at");
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
